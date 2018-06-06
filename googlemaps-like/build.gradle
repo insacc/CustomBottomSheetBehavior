@@ -27,4 +27,4 @@ dependencies {
 //    gradleVersion = '3.4.1'
 //}
 
-apply from: 'bintray.gradle'
+//apply from: 'bintray.gradle'
