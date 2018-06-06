@@ -1,12 +1,14 @@
 # CustomBottomSheetBehavior like Google Maps for Android [ ![Download](https://api.bintray.com/packages/mahc/maven/CustomBottomSheetBehavior/images/download.svg) ](https://bintray.com/mahc/maven/CustomBottomSheetBehavior/_latestVersion)
 Android Studio Project using Support Library focused on get Google Maps 3 states behavior including background image parallax and toolbars animations.
 
+- **In order to make it possible to add this dependency using the jitpack.io, some of the `build.gradle` files are different than the forked repo.
+
 ## Installation
 In your module/project build.gradle file add<br>
 ```
 dependencies {
    ...
-   implementation 'com.mahc.custombottomsheetbehavior:googlemaps-like:0.9.1'
+   'implementation 'com.github.insacc:CustomBottomSheetBehavior:<COMMIT_HASH_YOU_WANT>'
 }
 ```
 
