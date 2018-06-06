@@ -103,9 +103,9 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
     private boolean mCollapsible;
 
     @State
-    private int mState = STATE_ANCHOR_POINT;
+    private int mState = STATE_COLLAPSED;
     @State
-    private int mLastStableState = STATE_ANCHOR_POINT;
+    private int mLastStableState = STATE_COLLAPSED;
 
     private ViewDragHelper mViewDragHelper;
 
