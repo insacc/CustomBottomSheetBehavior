@@ -87,6 +87,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
 
     private static final float HIDE_THRESHOLD = 0.5f;
     private static final float HIDE_FRICTION = 0.1f;
+    private static final float SKIP_ANCHOR_THRESHOLD = 6000;
 
     private float mMinimumVelocity;
 
@@ -365,7 +366,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         // Force stop at the anchor - do not go from collapsed to expanded in one scroll
         if (
                 ( mLastStableState == STATE_COLLAPSED  &&  newTop < mAnchorPoint )  ||
-                        ( mLastStableState == STATE_EXPANDED   &&  newTop > mAnchorPoint )
+                        ((mLastStableState == STATE_EXPANDED   &&  newTop > mAnchorPoint))
                 ) {
             consumed[1] = dy;
             ViewCompat.offsetTopAndBottom( child, mAnchorPoint - currentTop );
@@ -442,9 +443,15 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
             // Are we flinging down?
             if ( scrollVelocity < -mMinimumVelocity ) {
                 if ( mLastStableState == STATE_EXPANDED ) {
-                    // Fling to from expanded to anchor
-                    top = mAnchorPoint;
-                    targetState = STATE_ANCHOR_POINT;
+                    if (Math.abs(scrollVelocity) > SKIP_ANCHOR_THRESHOLD) {
+                        // If the scroll is too big, set the state to collapsed instead of anchor_point
+                        top = mMaxOffset;
+                        targetState = STATE_COLLAPSED;
+                    } else {
+                        // Fling to from expanded to anchor
+                        top = mAnchorPoint;
+                        targetState = STATE_ANCHOR_POINT;
+                    }
                 }
                 else if(mCollapsible==true) {
                     if (mLastStableState == STATE_ANCHOR_POINT) {

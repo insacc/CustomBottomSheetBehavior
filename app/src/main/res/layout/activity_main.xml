@@ -51,6 +51,7 @@
         android:orientation="vertical"
         app:behavior_peekHeight="@dimen/bottom_sheet_peek_height"
         android:id="@+id/bottom_sheet"
+        app:defaultState="stateCollapsed"
         app:layout_behavior="@string/BottomSheetBehaviorGoogleMapsLike"
         app:anchorPoint="@dimen/anchor_point"
         app:behavior_hideable="true"
