@@ -11,6 +11,7 @@ import android.support.v4.view.NestedScrollingChild;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -103,6 +104,8 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
 
     private boolean mCollapsible;
 
+    private boolean mIsAnchorPointEnabled;
+
     @State
     private int mState = STATE_COLLAPSED;
     @State
@@ -153,6 +156,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
          */
         mAnchorPoint = DEFAULT_ANCHOR_POINT;
         mCollapsible = true;
+        mIsAnchorPointEnabled = true;
         a = context.obtainStyledAttributes(attrs, R.styleable.CustomBottomSheetBehavior);
         if (attrs != null) {
             mAnchorPoint = (int) a.getDimension( R.styleable.CustomBottomSheetBehavior_anchorPoint, 0);
@@ -174,7 +178,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         SavedState ss = (SavedState) state;
         super.onRestoreInstanceState(parent, child, ss.getSuperState());
         // Intermediate states are restored as collapsed state
-        if (ss.state == STATE_DRAGGING || ss.state == STATE_SETTLING) {
+        if (ss.state == STATE_DRAGGING || ss.state == STATE_SETTLING || (!mIsAnchorPointEnabled && ss.state == STATE_ANCHOR_POINT)) {
             mState = STATE_COLLAPSED;
         } else {
             mState = ss.state;
@@ -201,7 +205,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         /**
          * New behavior
          */
-        if (mState == STATE_ANCHOR_POINT) {
+        if (mIsAnchorPointEnabled && mState == STATE_ANCHOR_POINT) {
             ViewCompat.offsetTopAndBottom(child, mAnchorPoint);
         } else if (mState == STATE_EXPANDED) {
             ViewCompat.offsetTopAndBottom(child, mMinOffset);
@@ -245,7 +249,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
                 mScrollVelocityTracker.clear();
                 int initialX = (int) event.getX();
                 mInitialY = (int) event.getY();
-                if(mState == STATE_ANCHOR_POINT){
+                if(mState == STATE_ANCHOR_POINT && mIsAnchorPointEnabled){
                     mActivePointerId = event.getPointerId(event.getActionIndex());
                     mTouchingScrollingChild = true;
                 }else {
@@ -288,7 +292,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         }
 
         // Detect scroll direction for ignoring collapsible
-        if(mLastStableState == STATE_ANCHOR_POINT && action==MotionEvent.ACTION_MOVE) {
+        if(mIsAnchorPointEnabled && mLastStableState == STATE_ANCHOR_POINT && action==MotionEvent.ACTION_MOVE) {
             if(event.getY()>mInitialY && !mCollapsible) {
                 reset();
                 return false;
@@ -364,10 +368,8 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         int newTop     = currentTop - dy;
 
         // Force stop at the anchor - do not go from collapsed to expanded in one scroll
-        if (
-                ( mLastStableState == STATE_COLLAPSED  &&  newTop < mAnchorPoint )  ||
-                        ((mLastStableState == STATE_EXPANDED   &&  newTop > mAnchorPoint))
-                ) {
+        if (mIsAnchorPointEnabled && ((mLastStableState == STATE_COLLAPSED  &&  newTop < mAnchorPoint )  ||
+                        ((mLastStableState == STATE_EXPANDED   &&  newTop > mAnchorPoint)))) {
             consumed[1] = dy;
             ViewCompat.offsetTopAndBottom( child, mAnchorPoint - currentTop );
             dispatchOnSlide( child.getTop() );
@@ -421,14 +423,18 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
 
         // Are we flinging up?
         float scrollVelocity = mScrollVelocityTracker.getScrollVelocity();
-        if ( scrollVelocity > mMinimumVelocity) {
-            if ( mLastStableState == STATE_COLLAPSED ) {
-                // Fling from collapsed to anchor
-                top = mAnchorPoint;
-                targetState = STATE_ANCHOR_POINT;
+        if (scrollVelocity > mMinimumVelocity) {
+            if (mLastStableState == STATE_COLLAPSED) {
+                if (mIsAnchorPointEnabled) {
+                    // Fling from collapsed to anchor
+                    top = mAnchorPoint;
+                    targetState = STATE_ANCHOR_POINT;
+                } else {
+                   top = mMinOffset;
+                    targetState = STATE_EXPANDED;
+                }
             }
-            else
-            if ( mLastStableState == STATE_ANCHOR_POINT ) {
+            else if ( mLastStableState == STATE_ANCHOR_POINT ) {
                 // Fling from anchor to expanded
                 top = mMinOffset;
                 targetState = STATE_EXPANDED;
@@ -438,12 +444,11 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
                 top = mMinOffset;
                 targetState = STATE_EXPANDED;
             }
-        }
-        else
+        } else
             // Are we flinging down?
             if ( scrollVelocity < -mMinimumVelocity ) {
                 if ( mLastStableState == STATE_EXPANDED ) {
-                    if (Math.abs(scrollVelocity) > SKIP_ANCHOR_THRESHOLD) {
+                    if (Math.abs(scrollVelocity) > SKIP_ANCHOR_THRESHOLD || !mIsAnchorPointEnabled) {
                         // If the scroll is too big, set the state to collapsed instead of anchor_point
                         top = mMaxOffset;
                         targetState = STATE_COLLAPSED;
@@ -452,9 +457,8 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
                         top = mAnchorPoint;
                         targetState = STATE_ANCHOR_POINT;
                     }
-                }
-                else if(mCollapsible==true) {
-                    if (mLastStableState == STATE_ANCHOR_POINT) {
+                } else if(mCollapsible==true) {
+                    if (mIsAnchorPointEnabled && mLastStableState == STATE_ANCHOR_POINT) {
                         // Fling from anchor to collapsed
                         top = mMaxOffset;
                         targetState = STATE_COLLAPSED;
@@ -464,8 +468,13 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
                         targetState = STATE_COLLAPSED;
                     }
                 } else {
-                    top = mAnchorPoint;
-                    targetState = STATE_ANCHOR_POINT;
+                    if (mIsAnchorPointEnabled) {
+                        top = mAnchorPoint;
+                        targetState = STATE_ANCHOR_POINT;
+                    } else {
+                        top = mMaxOffset;
+                        targetState = STATE_COLLAPSED;
+                    }
                 }
             }
             // Not flinging, just settle to the nearest state
@@ -478,7 +487,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
                 }
                 // Expand?
                 else
-                if ( currentTop < mAnchorPoint * 0.5 ) {
+                if ( currentTop < mAnchorPoint * 0.5 || !mIsAnchorPointEnabled ) {
                     top = mMinOffset;
                     targetState = STATE_EXPANDED;
                 }
@@ -576,6 +585,14 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         return mCollapsible;
     }
 
+    public void setAnchorEnabled(boolean setEnabled) {
+        mIsAnchorPointEnabled = setEnabled;
+    }
+
+    public boolean isAnchorEnabled() {
+        return mIsAnchorPointEnabled;
+    }
+
     /**
      * Adds a callback to be notified of bottom sheet events.
      *
@@ -603,7 +620,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         /**
          * New behavior (added: state == STATE_ANCHOR_POINT ||)
          */
-        if ( state == STATE_COLLAPSED || state == STATE_EXPANDED || state == STATE_ANCHOR_POINT ||
+        if ( state == STATE_COLLAPSED || state == STATE_EXPANDED || (mIsAnchorPointEnabled &&state == STATE_ANCHOR_POINT) ||
                 (mHideable && state == STATE_HIDDEN)) {
             mState = state;
             mLastStableState = state;
@@ -618,7 +635,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
             top = mMaxOffset;
         }
         else
-        if (state == STATE_ANCHOR_POINT) {
+        if (mIsAnchorPointEnabled && state == STATE_ANCHOR_POINT) {
             top = mAnchorPoint;
         }
         else
@@ -762,7 +779,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
             }
 
             // Restrict Collapsed view (optional)
-            if(!mCollapsible && targetState==STATE_COLLAPSED) {
+            if(!mCollapsible && targetState==STATE_COLLAPSED && mIsAnchorPointEnabled) {
                 top = mAnchorPoint;
                 targetState = STATE_ANCHOR_POINT;
             }
