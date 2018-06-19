@@ -8,6 +8,7 @@
             <enum name="stateCollapsed" value="5"/>
             <enum name="stateHidden" value="6"/>
         </attr>
+        <attr name="setAnchorStateEnabled" format="boolean"/>
     </declare-styleable>
 
     <!--<declare-styleable name="MergedAppBarLayout">-->

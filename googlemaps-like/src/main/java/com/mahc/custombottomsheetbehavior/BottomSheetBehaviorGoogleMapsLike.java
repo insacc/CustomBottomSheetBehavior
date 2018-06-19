@@ -161,6 +161,7 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
         if (attrs != null) {
             mAnchorPoint = (int) a.getDimension( R.styleable.CustomBottomSheetBehavior_anchorPoint, 0);
             mState = a.getInt(R.styleable.CustomBottomSheetBehavior_defaultState, STATE_ANCHOR_POINT);
+            mIsAnchorPointEnabled = a.getBoolean(R.styleable.CustomBottomSheetBehavior_setAnchorStateEnabled, true);
         }
         a.recycle();
 
