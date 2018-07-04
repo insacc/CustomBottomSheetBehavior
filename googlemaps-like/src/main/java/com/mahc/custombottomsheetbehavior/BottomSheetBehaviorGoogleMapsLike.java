@@ -11,11 +11,11 @@ import android.support.v4.view.NestedScrollingChild;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -627,11 +627,11 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
             mLastStableState = state;
         }
 
-        V child = mViewRef == null ? null : mViewRef.get();
+        final V child = mViewRef == null ? null : mViewRef.get();
         if (child == null) {
             return;
         }
-        int top;
+        final int top;
         if (state == STATE_COLLAPSED) {
             top = mMaxOffset;
         }
@@ -650,8 +650,23 @@ public class BottomSheetBehaviorGoogleMapsLike<V extends View> extends Coordinat
             throw new IllegalArgumentException("Illegal state argument: " + state);
         }
         setStateInternal(STATE_SETTLING);
-        if (mViewDragHelper.smoothSlideViewTo(child, child.getLeft(), top)) {
-            ViewCompat.postOnAnimation(child, new SettleRunnable(child, state));
+        // Start the animation; wait until a pending layout if there is one.
+        ViewParent parent = child.getParent();
+
+        final @State int currentState = state;
+        if (parent != null && parent.isLayoutRequested() && ViewCompat.isAttachedToWindow(child)) {
+            child.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (mViewDragHelper.smoothSlideViewTo(child, child.getLeft(), top)) {
+                        ViewCompat.postOnAnimation(child, new SettleRunnable(child, currentState));
+                    }
+                }
+            });
+        } else {
+            if (mViewDragHelper.smoothSlideViewTo(child, child.getLeft(), top)) {
+                ViewCompat.postOnAnimation(child, new SettleRunnable(child, currentState));
+            }
         }
     }
 
